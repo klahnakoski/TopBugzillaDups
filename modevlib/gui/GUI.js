@@ -133,12 +133,12 @@ GUI = {};
 				GUI.pleaseRefreshLater=true;
 				//USE DEFAULT FILTERS
 				importScript(["ComponentFilter.js", "ProductFilter.js", "ProgramFilter.js"], function(){
-					let programs = coalesce(showDefaultFilters.programs, MozillaPrograms);
-					GUI.state.programFilter = new ProgramFilter(indexName, programs);
+					// let programs = coalesce(showDefaultFilters.programs, MozillaPrograms);
+					// GUI.state.programFilter = new ProgramFilter(indexName, programs);
 					GUI.state.productFilter = new ProductFilter(indexName);
 					GUI.state.componentFilter = new ComponentFilter(indexName, GUI.state.productFilter);
 
-					GUI.customFilters.push(GUI.state.programFilter);
+					// GUI.customFilters.push(GUI.state.programFilter);
 					GUI.customFilters.push(GUI.state.productFilter);
 					GUI.customFilters.push(GUI.state.componentFilter);
 
