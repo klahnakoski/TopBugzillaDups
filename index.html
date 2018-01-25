@@ -1,0 +1,131 @@
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<HTML>
+<HEAD>
+	<title>Top Bugzilla Dups</title>
+	<script type="text/javascript" src="modevlib/imports/import.js"></script>
+</HEAD>
+<BODY>
+
+<div id="sidebar" style="width:300px;">
+	<br>
+	<br>
+
+	<div style="height: 30px; text-align: center;vertical-align:middle;">
+		<span id="status" style="height:30px">Page Loading...</span><span class="loading"><img src="images/spinner.gif" alt=""></span>
+	</div>
+
+	<hr>
+	<div id="description">
+		Cross-reference Bugzilla and Orange Factor to produce a list of most
+		active intermittent failures with no comments for the past week,
+		not include comments from today.
+	</div>
+	<hr>
+	<div id="testMessage"></div>
+	<hr>
+	<div id="stats"></div>
+	<hr>
+	<div id="parameters" class="parameters">
+	</div>
+	<div id="filters" class="menu"></div>
+</div>
+
+<div style="align:left;position:relative;float:left;width:800px;">
+	<h1 id="title">Top Bugzilla Duplicates</h1>
+	<br>
+	<div id="content" style="width:800px;"></div>
+</div>
+
+
+<script type="application/javascript">
+
+	importScript(['modevlib/main.js'], function () {
+		let thread;
+		let createChart = function () {
+			if (thread !== undefined)
+				thread.kill();
+			thread = Thread.run(__createChart());
+		};
+
+		let __createChart = function* () {
+			let ba = Log.action("get bugs", true);
+			let response = null;
+			try {
+				response = yield ESQuery.run({
+					"from": "public_bugs",
+					"select": [
+						"bug_id",
+						{"name": "Description", "value": "short_desc"},
+						// "modified_ts",
+						"created_ts",
+						"dupe_by",
+					],
+					"esfilter": {
+						"and": [
+							Mozilla.CurrentRecords.esfilter,
+							Mozilla.BugStatus.Open.esfilter,
+							{"range":{"created_ts":{"gte": Date.today().subtract(Duration.YEAR).milli()}}},
+							{"exists": {"field": "dupe_by"}},
+						],
+					},
+				});
+
+				response.list.forall(function (b) {
+					b.num_dups = b.dupe_by.length
+				});
+			} finally {
+				Log.actionDone(ba)
+			}//try
+
+			let output = qb.sort(
+				response.list,
+				[
+					{"value": "num_dups", "sort": -1},
+					"created_ts",
+				],
+			).substring(0,100);
+			let html = new Template([
+				'<table class="table"><thead><tr>',
+				'<td style="text-align:center">Bug ID</td>',
+				'<td>Description</td>',
+				'<td style="text-align:center">Duplicates</td>',
+				'</tr></thead><tbody>',
+				{
+					"from": ".",
+					"template": [
+						'<tr class="hoverable" onclick="Bugzilla.showBugs([{{bug_id}}])">',
+						'<td><div>{{bug_id}}</div></td>',
+						'<td><div style="width:600px;text-wrap: normal;">{{Description}}</div></td>',
+						'<td><div style="text-align: right">{{num_dups}}</div></td>',
+						'</tr>',
+					],
+				},
+				'</tbody></table>',
+			]).expand(output);
+
+			$("#content").html(html);
+			yield (null);
+		};
+
+
+		$(document).ready(function () {
+			GUI.setup(
+				createChart,
+				[],
+				[],
+				"bugs",
+				false		//SHOW DEFAULT FILTERS?
+			);
+		});
+
+	});
+
+</script>
+
+
+</BODY>
+</HTML>
+
